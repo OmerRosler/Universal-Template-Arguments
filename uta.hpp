@@ -112,4 +112,32 @@ This will be used to unify `nttp_` and `type_`
 
 Then we could create a new tag template for `template_<nttp_, type_, type_>` or something similar
 */
+
+template<typename Tag>
+struct template_tag;
+
+template<template<typename> typename TypeTag>
+struct template_type_tag {};
+
+
+template<template<auto> typename NTTPTag>
+struct template_nttp_tag {};
+
+template<typename Tag>
+struct unify_higher_tags;
+
+template<>
+struct unify_higher_tags<template_type_tag<type_>> {};
+
+
+template<>
+struct unify_higher_tags<template_nttp_tag<nttp_>> {};
+
+template<typename T>
+unify_higher_tags(type_<T>) -> unify_higher_tags<template_type_tag<type_>>;
+
+
+template<auto V>
+unify_higher_tags(nttp_<V>) -> unify_higher_tags<template_nttp_tag<nttp_>>;
+
 } //namespace uta
