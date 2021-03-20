@@ -105,4 +105,11 @@ variadic_arg_list(TaggedTypes...) -> variadic_arg_list<basic_arg{TaggedTypes()}.
 
 variadic_arg_list() -> variadic_arg_list<>;
 
+/* TODO: The logic that unified `auto` and `typename` needs to be extended
+to unify `template<auto>`, `template<typename>`.
+
+This will be used to unify `nttp_` and `type_` 
+
+Then we could create a new tag template for `template_<nttp_, type_, type_>` or something similar
+*/
 } //namespace uta
