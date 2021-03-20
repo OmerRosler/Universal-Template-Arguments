@@ -22,25 +22,25 @@ struct templ {};
 
 int main()
 {
-    basic_universal<uta::nttp_tag<3>{}>();
-    basic_universal<uta::type_tag<int>{}>();
+    basic_universal<uta::nttp_<3>{}>();
+    basic_universal<uta::type_<int>{}>();
 
-    variadic_universal<uta::variadic_arg_list{uta::type_tag<int>{}, uta::nttp_tag<3>{}}>();
-    variadic_universal<uta::variadic_arg_list{uta::nttp_tag<3>{}, uta::type_tag<int>{}}>();
+    variadic_universal<uta::variadic_arg_list{uta::type_<int>{}, uta::nttp_<3>{}}>();
+    variadic_universal<uta::variadic_arg_list{uta::nttp_<3>{}, uta::type_<int>{}}>();
 
-    variadic_universal<uta::variadic_arg_list{uta::type_tag<int>{}}>();
-    variadic_universal<uta::variadic_arg_list{uta::nttp_tag<3>{}}>();
+    variadic_universal<uta::variadic_arg_list{uta::type_<int>{}}>();
+    variadic_universal<uta::variadic_arg_list{uta::nttp_<3>{}}>();
     variadic_universal<uta::variadic_arg_list{}>();
 
-    are_all_types<uta::type_tag<int>{}>();
+    are_all_types<uta::type_<int>{}>();
 
-    static_assert(!are_all_types<uta::type_tag<int>{}, uta::nttp_tag<3>{}>());
+    static_assert(!are_all_types<uta::type_<int>{}, uta::nttp_<3>{}>());
 
-    variadic_universal<uta::nttp_tag<3>{}>();
-    variadic_universal<uta::type_tag<int>{}>();
+    variadic_universal<uta::nttp_<3>{}>();
+    variadic_universal<uta::type_<int>{}>();
 
-    static_assert(are_all_types<uta::type_tag<int>{}>());
+    static_assert(are_all_types<uta::type_<int>{}>());
 
-    static_assert(!are_all_types<uta::nttp_tag<42>{}>());
+    static_assert(!are_all_types<uta::nttp_<42>{}>());
 
 }
