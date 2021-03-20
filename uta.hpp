@@ -1,3 +1,4 @@
+
 #include <type_traits>
 
 namespace uta
@@ -13,13 +14,13 @@ enum class basic_arg_type
 
 
 template<typename T>
-struct type 
+struct type_tag 
 {
     static constexpr auto enum_value = basic_arg_type::type;
 };
 
 template<auto V>
-struct nttp 
+struct nttp_tag 
 {
     static constexpr auto enum_value = basic_arg_type::nttp;
 };
@@ -28,48 +29,14 @@ template<typename T>
 struct is_tag_impl : std::false_type {};
 
 template<typename T>
-struct is_tag_impl<type<T>> : std::true_type {};
+struct is_tag_impl<type_tag<T>> : std::true_type {};
 
 template<auto V>
-struct is_tag_impl<nttp<V>> : std::true_type {};
+struct is_tag_impl<nttp_tag<V>> : std::true_type {};
 
 template<typename T>
 concept tag_type = is_tag_impl<T>::value;
 /*******************************************************/
-
-template<basic_arg_type tag>
-struct basic_universal_arg;
-
-template<>
-struct basic_universal_arg<basic_arg_type::type>
-{
-    template<typename T>
-    constexpr basic_universal_arg(type<T>) {}
-
-    static constexpr auto enum_value = basic_arg_type::type;
-};
-
-template<>
-struct basic_universal_arg<basic_arg_type::nttp>
-{
-    template<auto V>
-    constexpr basic_universal_arg(nttp<V>) {}
-
-    static constexpr auto enum_value = basic_arg_type::nttp;
-
-};
-
-template<typename T>
-basic_universal_arg(type<T>) -> 
-    basic_universal_arg<basic_arg_type::type>;
-
-template<auto V>
-basic_universal_arg(nttp<V>) -> 
-    basic_universal_arg<basic_arg_type::nttp>;
-
-
-/*******************************************************/
-
 
 enum class arg_type 
 {
@@ -79,20 +46,53 @@ enum class arg_type
     tmpl
 };
 
+template<tag_type Tag>
+struct basic_arg;
 
-template<basic_universal_arg... args>
+template<typename T>
+struct basic_arg<type_tag<T>>
+{
+    constexpr basic_arg(type_tag<T>) noexcept {}
+
+    using type = T;
+
+    static constexpr auto tag_enum = basic_arg_type::type;
+};
+
+template<auto V>
+struct basic_arg<nttp_tag<V>>
+{
+    constexpr basic_arg(nttp_tag<V>) noexcept {}
+
+    static constexpr auto tag_enum = basic_arg_type::nttp;
+
+    static constexpr auto value = V;
+};
+
+template<typename T>
+basic_arg(type_tag<T>) -> basic_arg<type_tag<T>>;
+
+template<auto V>
+basic_arg(nttp_tag<V>) -> basic_arg<nttp_tag<V>>;
+
+/*************************************************************/
+
+
+template<basic_arg... args>
 struct variadic_arg_list;
 
-template<basic_universal_arg first, basic_universal_arg... args>
+template<basic_arg first, basic_arg... args>
 struct variadic_arg_list<first, args...>
 {
     template<typename T, tag_type... Args> 
-        requires (decltype(first)::enum_value == basic_arg_type::type) && (sizeof...(Args) == sizeof...(args))
-    constexpr variadic_arg_list(type<T>, Args...) {}
+        requires (decltype(first)::tag_enum == basic_arg_type::type) && (sizeof...(Args) == sizeof...(args))
+    constexpr variadic_arg_list(type_tag<T>, Args...) {}
 
     template<auto V, tag_type... Args> 
-        requires (decltype(first)::enum_value == basic_arg_type::nttp) && (sizeof...(Args) == sizeof...(args))
-    constexpr variadic_arg_list(nttp<V>, Args...) {}
+        requires (decltype(first)::tag_enum == basic_arg_type::nttp) && (sizeof...(Args) == sizeof...(args))
+    constexpr variadic_arg_list(nttp_tag<V>, Args...) {}
+
+    static constexpr auto tag_enum = arg_type::variadic;
 };
 
 
@@ -103,54 +103,8 @@ struct variadic_arg_list<>
 };
 
 template<tag_type... TaggedTypes> requires (sizeof...(TaggedTypes) != 0)
-variadic_arg_list(TaggedTypes...) -> variadic_arg_list<basic_universal_arg{TaggedTypes()}...>;
+variadic_arg_list(TaggedTypes...) -> variadic_arg_list<basic_arg{TaggedTypes()}...>;
 
 variadic_arg_list() -> variadic_arg_list<>;
 
-/*******************************************************/
-
-template<arg_type tag>
-struct universal_arg;
-
-template<>
-struct universal_arg<arg_type::variadic>
-{
-    template<basic_universal_arg... args>
-    constexpr universal_arg(variadic_arg_list<args...>) {}
-};
-
-
-template<>
-struct universal_arg<arg_type::nttp>
-{
-    template<auto V>
-    constexpr universal_arg(nttp<V>) {}
-};
-
-template<>
-struct universal_arg<arg_type::type>
-{
-    template<typename T>
-    constexpr universal_arg(type<T>) {}
-};
-
-template<auto V>
-universal_arg(nttp<V>) -> universal_arg<arg_type::nttp>;
-
-
-template<typename T>
-universal_arg(type<T>) -> universal_arg<arg_type::type>;
-
-template<basic_universal_arg... args>
-universal_arg(variadic_arg_list<args...>) -> universal_arg<arg_type::variadic>;
-
-
-
 } //namespace uta
-/*
-TODO:
-
-3. Make a (more) higher argument type that includes template on 2.
-4. Make an "any" argument type which is either of the three.
-5. Convert this whole bussiness to "higher" templates (not very easy).
-*/
