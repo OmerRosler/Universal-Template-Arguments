@@ -1,6 +1,6 @@
 #include <type_traits>
 
-namespace uta //universal template argument
+namespace uta
 {
 template<typename T>
 constexpr T&& declval();
