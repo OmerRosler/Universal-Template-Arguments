@@ -1,6 +1,10 @@
-
 #include <type_traits>
 
+namespace utils
+{
+template<typename T>
+constexpr T&& constexpr_declval() noexcept;
+}
 namespace uta
 {
 
@@ -9,6 +13,32 @@ enum class basic_arg_type
     type,
     nttp
 };
+
+enum class arg_type 
+{
+    type,
+    nttp,
+    templ
+};
+
+
+template<typename T>
+struct is_tag_impl;
+
+template<typename T>
+concept tag_type = is_tag_impl<T>::value;
+
+template<tag_type Tag>
+struct basic_arg;
+
+template<typename T>
+struct generic_arg_like_impl;
+
+template<std::size_t NestingLevel, tag_type>
+struct universal_arg;
+
+template<typename T>
+concept generic_arg_like = generic_arg_like_impl<T>::value;
 
 
 template<typename T>
@@ -23,6 +53,12 @@ struct nttp_
     static constexpr auto enum_value = basic_arg_type::nttp;
 };
 
+template<template<generic_arg_like auto...> typename Templ>
+struct template_
+{
+    static constexpr auto enum_value = arg_type::templ;
+};
+
 template<typename T>
 struct is_tag_impl : std::false_type {};
 
@@ -32,20 +68,21 @@ struct is_tag_impl<type_<T>> : std::true_type {};
 template<auto V>
 struct is_tag_impl<nttp_<V>> : std::true_type {};
 
-template<typename T>
-concept tag_type = is_tag_impl<T>::value;
-/*******************************************************/
+template<template<generic_arg_like auto...> typename Templ>
+struct is_tag_impl<template_<Templ>> : std::true_type {};
 
-enum class arg_type 
-{
-    type,
-    nttp,
-    variadic,
-    tmpl
-};
+template<typename T>
+struct generic_arg_like_impl : std::false_type {};
+
+template<std::size_t NestingLevel, tag_type Tag>
+struct generic_arg_like_impl<universal_arg<NestingLevel, Tag>> : std::true_type {};
 
 template<tag_type Tag>
-struct basic_arg;
+struct generic_arg_like_impl<basic_arg<Tag>> : std::true_type {};
+
+
+/*******************************************************/
+
 
 template<typename T>
 struct basic_arg<type_<T>>
@@ -58,13 +95,12 @@ struct basic_arg<type_<T>>
 };
 
 template<auto V>
-struct basic_arg<nttp_<V>>
+struct basic_arg<nttp_<V>> : std::integral_constant<decltype(V), V>
 {
     constexpr basic_arg(nttp_<V>) noexcept {}
 
     static constexpr auto tag_enum = basic_arg_type::nttp;
 
-    static constexpr auto value = V;
 };
 
 template<typename T>
@@ -90,7 +126,6 @@ struct variadic_arg_list<first, args...>
         requires (decltype(first)::tag_enum == basic_arg_type::nttp) && (sizeof...(Args) == sizeof...(args))
     constexpr variadic_arg_list(nttp_<V>, Args...) {}
 
-    static constexpr auto tag_enum = arg_type::variadic;
 };
 
 
@@ -105,14 +140,7 @@ variadic_arg_list(TaggedTypes...) -> variadic_arg_list<basic_arg{TaggedTypes()}.
 
 variadic_arg_list() -> variadic_arg_list<>;
 
-/* TODO: The logic that unified `auto` and `typename` needs to be extended
-to unify `template<auto>`, `template<typename>`.
-
-This will be used to unify `nttp_` and `type_` 
-
-Then we could create a new tag template for `template_<nttp_, type_, type_>` or something similar
-*/
-
+/***********************************************************/
 
 
 struct nttp_p 
@@ -128,33 +156,84 @@ template<typename T>
 concept parameter_tag = std::is_same_v<T, nttp_p> || std::is_same_v<T, type_p>;
 
 template<parameter_tag... Params>
-struct template_tag
+struct template_signature
 {
     template<basic_arg... Values> requires (sizeof...(Params) == sizeof...(Values)) &&
         ((decltype(Values)::tag_enum == Params::tag_enum) && ...)
-    constexpr template_tag(variadic_arg_list<Values...>) {
+    constexpr template_signature(variadic_arg_list<Values...>) {
+
     }
 };
 
+namespace 
+{
 template<basic_arg_type ParamTag>
 constexpr auto transform_param_to_arg_tag()
 {
     if constexpr (ParamTag == basic_arg_type::nttp)
     {
-        return constexpr_declval<nttp_p>();
+        return utils::constexpr_declval<nttp_p>();
     }
     else if (ParamTag == basic_arg_type::type)
     {
-        return constexpr_declval<type_p>();
+        return utils::constexpr_declval<type_p>();
     }
+}
 }
 
 template<basic_arg_type ParamTag>
 using transform_param_to_arg_tag_t = decltype(transform_param_to_arg_tag<ParamTag>());
 
 template<basic_arg... Values> requires (sizeof...(Values) != 0)
-template_tag(variadic_arg_list<Values...>) -> template_tag<transform_param_to_arg_tag_t<decltype(Values)::tag_enum>...>;
+template_signature(variadic_arg_list<Values...>) -> template_signature<transform_param_to_arg_tag_t<decltype(Values)::tag_enum>...>;
 
 
+/*********************************************************/
+
+
+
+template<std::size_t NestingLevel, tag_type>
+struct universal_arg;
+
+template<typename T>
+struct universal_arg<0, type_<T>> : basic_arg<type_<T>> 
+{
+    using base_t = basic_arg<type_<T>>;
+    using base_t::base_t;
+};
+
+template<auto V>
+struct universal_arg<0, nttp_<V>> : basic_arg<nttp_<V>>
+{
+    using base_t = basic_arg<nttp_<V>>;
+    using base_t::base_t;
+};
+
+template<std::size_t NestingLevel>
+struct wrap_template
+{
+    template<tag_type Tag>
+    using templ = universal_arg<NestingLevel, Tag>;
+
+};
+
+template<std::size_t NestingLevel, template<generic_arg_like auto...> typename Templ>
+struct universal_arg<NestingLevel, template_<Templ>>
+{
+    constexpr universal_arg(template_<Templ>) {}
+
+    //TODO: Add Apply to the API
+};
+
+
+template<typename T>
+universal_arg(type_<T>) -> universal_arg<0, type_<T>>;
+
+template<auto V>
+universal_arg(nttp_<V>) -> universal_arg<0, nttp_<V>>;
+
+//TODO: Add deduction of `NestingLevel` from ctor arguments
+template<template<generic_arg_like auto...> typename Templ>
+universal_arg(template_<Templ>) -> universal_arg<1, template_<Templ>>;
 
 } //namespace uta
