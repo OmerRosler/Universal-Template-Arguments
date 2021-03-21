@@ -217,12 +217,16 @@ struct wrap_template
 
 };
 
-template<std::size_t NestingLevel, template<generic_arg_like auto...> typename Templ>
-struct universal_arg<NestingLevel, template_<Templ>>
+template<template<basic_arg...> typename Templ>
+struct universal_arg<1, template_<Templ>>
 {
     constexpr universal_arg(template_<Templ>) {}
 
-    //TODO: Add Apply to the API
+    template<basic_arg... args> requires requires() {typename Templ<args...>;}
+    struct apply
+    {
+        using type = Templ<args...>;
+    };
 };
 
 

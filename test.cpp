@@ -19,6 +19,9 @@ struct templ_example {};
 template<uta::basic_arg T, uta::basic_arg V>
 using templ_adaptor = templ_example<typename decltype(T)::type, decltype(V)::value>;
 
+template<uta::basic_arg... Args>
+struct test_variadic_template {};
+
 template<template<uta::basic_arg, uta::basic_arg> typename Templ>
 int test_templ() { return 42;}
 
