@@ -113,31 +113,48 @@ This will be used to unify `nttp_` and `type_`
 Then we could create a new tag template for `template_<nttp_, type_, type_>` or something similar
 */
 
-template<typename Tag>
-struct template_tag;
-
-template<template<typename> typename TypeTag>
-struct template_type_tag {};
 
 
-template<template<auto> typename NTTPTag>
-struct template_nttp_tag {};
-
-template<typename Tag>
-struct unify_higher_tags;
-
-template<>
-struct unify_higher_tags<template_type_tag<type_>> {};
-
-
-template<>
-struct unify_higher_tags<template_nttp_tag<nttp_>> {};
+struct nttp_p 
+{
+    static constexpr auto tag_enum = basic_arg_type::nttp;
+};
+struct type_p 
+{
+    static constexpr auto tag_enum = basic_arg_type::type;
+};
 
 template<typename T>
-unify_higher_tags(type_<T>) -> unify_higher_tags<template_type_tag<type_>>;
+concept parameter_tag = std::is_same_v<T, nttp_p> || std::is_same_v<T, type_p>;
+
+template<parameter_tag... Params>
+struct template_tag
+{
+    template<basic_arg... Values> requires (sizeof...(Params) == sizeof...(Values)) &&
+        ((decltype(Values)::tag_enum == Params::tag_enum) && ...)
+    constexpr template_tag(variadic_arg_list<Values...>) {
+    }
+};
+
+template<basic_arg_type ParamTag>
+constexpr auto transform_param_to_arg_tag()
+{
+    if constexpr (ParamTag == basic_arg_type::nttp)
+    {
+        return constexpr_declval<nttp_p>();
+    }
+    else if (ParamTag == basic_arg_type::type)
+    {
+        return constexpr_declval<type_p>();
+    }
+}
+
+template<basic_arg_type ParamTag>
+using transform_param_to_arg_tag_t = decltype(transform_param_to_arg_tag<ParamTag>());
+
+template<basic_arg... Values> requires (sizeof...(Values) != 0)
+template_tag(variadic_arg_list<Values...>) -> template_tag<transform_param_to_arg_tag_t<decltype(Values)::tag_enum>...>;
 
 
-template<auto V>
-unify_higher_tags(nttp_<V>) -> unify_higher_tags<template_nttp_tag<nttp_>>;
 
 } //namespace uta

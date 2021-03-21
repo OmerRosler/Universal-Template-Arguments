@@ -25,22 +25,16 @@ int main()
     basic_universal<uta::nttp_<3>{}>();
     basic_universal<uta::type_<int>{}>();
 
-    variadic_universal<uta::variadic_arg_list{uta::type_<int>{}, uta::nttp_<3>{}}>();
-    variadic_universal<uta::variadic_arg_list{uta::nttp_<3>{}, uta::type_<int>{}}>();
-
-    variadic_universal<uta::variadic_arg_list{uta::type_<int>{}}>();
-    variadic_universal<uta::variadic_arg_list{uta::nttp_<3>{}}>();
-    variadic_universal<uta::variadic_arg_list{}>();
-
     are_all_types<uta::type_<int>{}>();
 
     static_assert(!are_all_types<uta::type_<int>{}, uta::nttp_<3>{}>());
 
-    variadic_universal<uta::nttp_<3>{}>();
-    variadic_universal<uta::type_<int>{}>();
-
     static_assert(are_all_types<uta::type_<int>{}>());
 
     static_assert(!are_all_types<uta::nttp_<42>{}>());
+
+    uta::template_tag t{uta::variadic_arg_list{uta::nttp_<42>{}, uta::type_<int>{}, uta::type_<double>{}}};
+
+    static_assert(std::is_same_v<decltype(t), uta::template_tag<uta::nttp_p, uta::type_p, uta::type_p>>);
 
 }
