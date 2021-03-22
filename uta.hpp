@@ -200,6 +200,8 @@ struct universal_arg<0, type_<T>> : basic_arg<type_<T>>
 {
     using base_t = basic_arg<type_<T>>;
     using base_t::base_t;
+
+    static constexpr auto tag_enum = arg_type::type;
 };
 
 template<auto V>
@@ -207,26 +209,23 @@ struct universal_arg<0, nttp_<V>> : basic_arg<nttp_<V>>
 {
     using base_t = basic_arg<nttp_<V>>;
     using base_t::base_t;
+
+    static constexpr auto tag_enum = arg_type::nttp;
 };
 
-template<std::size_t NestingLevel>
-struct wrap_template
-{
-    template<tag_type Tag>
-    using templ = universal_arg<NestingLevel, Tag>;
-
-};
 
 template<template<basic_arg...> typename Templ>
 struct universal_arg<1, template_<Templ>>
 {
     constexpr universal_arg(template_<Templ>) {}
 
-    template<basic_arg... args> requires requires() {typename Templ<args...>;}
+    template<basic_arg... args>
     struct apply
     {
         using type = Templ<args...>;
     };
+
+    static constexpr auto tag_enum = arg_type::templ;
 };
 
 

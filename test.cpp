@@ -31,6 +31,14 @@ int test_sig_type() { return 42;}
 template<uta::universal_arg Any>
 int test_templated_arg() { return 42;}
 
+
+template<uta::universal_arg Any>
+auto test_template1_apply()
+{
+    return typename decltype(Any)::template apply<uta::type_<int>{}, uta::nttp_<42>{}>::type();
+}
+
+
 int main()
 {
     basic_universal<uta::nttp_<3>{}>();
@@ -55,6 +63,8 @@ int main()
     test_templated_arg<uta::type_<int>{}>();
 
     test_templated_arg<uta::template_<templ_adaptor>{}>();
+
+    test_template1_apply<uta::template_<templ_adaptor>{}>();
 
 
 }
