@@ -235,8 +235,38 @@ universal_arg(type_<T>) -> universal_arg<0, type_<T>>;
 template<auto V>
 universal_arg(nttp_<V>) -> universal_arg<0, nttp_<V>>;
 
-//TODO: Add deduction of `NestingLevel` from ctor arguments
-template<template<generic_arg_like auto...> typename Templ>
+
+template<template<basic_arg...> typename Templ>
 universal_arg(template_<Templ>) -> universal_arg<1, template_<Templ>>;
 
+
+template<std::size_t NestingLevel, generic_arg_like auto... Args>
+struct wrap_universal
+{
+    template<template<generic_arg_like auto...> typename Templ>
+    using templ = universal_arg<NestingLevel, type_<Templ<Args...>>>;
+};
+
+template<template<template<generic_arg_like auto...> typename> typename Templ>
+struct wrap_higher_template
+{
+    template<generic_arg_like auto... Args>
+    using templ = Templ<wrap_universal<1, Args...>::template templ>;
+};
+//TODO: Change level 2 to any level > 1
+
+template<
+    template<
+        template<generic_arg_like auto...> typename
+    > typename Templ>
+struct universal_arg<2, template_<wrap_higher_template<Templ>::template templ>>
+{
+    //TODO: Add requirement for instantiating Templ with values of the parameters
+    template<parameter_tag... Params>
+    constexpr universal_arg(template_signature<Params...>) {}
+};
+
+
+template<parameter_tag... Params>
+universal_arg(template_signature<Params...>) -> universal_arg<2, template_<wrap_universal<1>::template templ>>;
 } //namespace uta
