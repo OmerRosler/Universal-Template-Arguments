@@ -1,3 +1,6 @@
+#ifndef UTA_H
+#define UTA_H
+
 #include <type_traits>
 
 namespace utils
@@ -34,6 +37,21 @@ struct basic_arg;
 template<typename T>
 struct generic_arg_like_impl;
 
+struct nttp_p 
+{
+    static constexpr auto tag_enum = basic_arg_type::nttp;
+};
+struct type_p 
+{
+    static constexpr auto tag_enum = basic_arg_type::type;
+};
+
+template<typename T>
+concept parameter_tag = std::is_same_v<T, nttp_p> || std::is_same_v<T, type_p>;
+
+template<parameter_tag... Params>
+struct template_signature;
+
 template<std::size_t NestingLevel, tag_type>
 struct universal_arg;
 
@@ -59,6 +77,7 @@ struct template_
     static constexpr auto enum_value = arg_type::templ;
 };
 
+
 template<typename T>
 struct is_tag_impl : std::false_type {};
 
@@ -70,6 +89,9 @@ struct is_tag_impl<nttp_<V>> : std::true_type {};
 
 template<template<generic_arg_like auto...> typename Templ>
 struct is_tag_impl<template_<Templ>> : std::true_type {};
+
+template<parameter_tag... Params>
+struct is_tag_impl<template_signature<Params...>> : std::true_type {};
 
 template<typename T>
 struct generic_arg_like_impl : std::false_type {};
@@ -142,28 +164,8 @@ variadic_arg_list() -> variadic_arg_list<>;
 
 /***********************************************************/
 
-
-struct nttp_p 
-{
-    static constexpr auto tag_enum = basic_arg_type::nttp;
-};
-struct type_p 
-{
-    static constexpr auto tag_enum = basic_arg_type::type;
-};
-
-template<typename T>
-concept parameter_tag = std::is_same_v<T, nttp_p> || std::is_same_v<T, type_p>;
-
 template<parameter_tag... Params>
-struct template_signature
-{
-    template<basic_arg... Values> requires (sizeof...(Params) == sizeof...(Values)) &&
-        ((decltype(Values)::tag_enum == Params::tag_enum) && ...)
-    constexpr template_signature(variadic_arg_list<Values...>) {
-
-    }
-};
+struct template_signature {};
 
 namespace 
 {
@@ -184,19 +186,19 @@ constexpr auto transform_param_to_arg_tag()
 template<basic_arg_type ParamTag>
 using transform_param_to_arg_tag_t = decltype(transform_param_to_arg_tag<ParamTag>());
 
-template<basic_arg... Values> requires (sizeof...(Values) != 0)
-template_signature(variadic_arg_list<Values...>) -> template_signature<transform_param_to_arg_tag_t<decltype(Values)::tag_enum>...>;
+// template<basic_arg... Values> requires (sizeof...(Values) != 0)
+// template_signature(variadic_arg_list<Values...>) -> template_signature<transform_param_to_arg_tag_t<decltype(Values)::tag_enum>...>;
 
 
 /*********************************************************/
 
 
 
-template<std::size_t NestingLevel, tag_type>
-struct universal_arg;
+template<tag_type>
+struct up_to_level_1;
 
 template<typename T>
-struct universal_arg<0, type_<T>> : basic_arg<type_<T>> 
+struct up_to_level_1<type_<T>> : basic_arg<type_<T>> 
 {
     using base_t = basic_arg<type_<T>>;
     using base_t::base_t;
@@ -205,7 +207,7 @@ struct universal_arg<0, type_<T>> : basic_arg<type_<T>>
 };
 
 template<auto V>
-struct universal_arg<0, nttp_<V>> : basic_arg<nttp_<V>>
+struct up_to_level_1<nttp_<V>> : basic_arg<nttp_<V>>
 {
     using base_t = basic_arg<nttp_<V>>;
     using base_t::base_t;
@@ -215,9 +217,9 @@ struct universal_arg<0, nttp_<V>> : basic_arg<nttp_<V>>
 
 
 template<template<basic_arg...> typename Templ>
-struct universal_arg<1, template_<Templ>>
+struct up_to_level_1<template_<Templ>>
 {
-    constexpr universal_arg(template_<Templ>) {}
+    constexpr up_to_level_1(template_<Templ>) {}
 
     template<basic_arg... args>
     struct apply
@@ -230,43 +232,43 @@ struct universal_arg<1, template_<Templ>>
 
 
 template<typename T>
-universal_arg(type_<T>) -> universal_arg<0, type_<T>>;
+up_to_level_1(type_<T>) -> up_to_level_1<type_<T>>;
 
 template<auto V>
-universal_arg(nttp_<V>) -> universal_arg<0, nttp_<V>>;
+up_to_level_1(nttp_<V>) -> up_to_level_1<nttp_<V>>;
 
 
 template<template<basic_arg...> typename Templ>
-universal_arg(template_<Templ>) -> universal_arg<1, template_<Templ>>;
+up_to_level_1(template_<Templ>) -> up_to_level_1<template_<Templ>>;
 
-
-template<std::size_t NestingLevel, generic_arg_like auto... Args>
-struct wrap_universal
-{
-    template<template<generic_arg_like auto...> typename Templ>
-    using templ = universal_arg<NestingLevel, type_<Templ<Args...>>>;
-};
-
-template<template<template<generic_arg_like auto...> typename> typename Templ>
-struct wrap_higher_template
-{
-    template<generic_arg_like auto... Args>
-    using templ = Templ<wrap_universal<1, Args...>::template templ>;
-};
-//TODO: Change level 2 to any level > 1
-
-template<
-    template<
-        template<generic_arg_like auto...> typename
-    > typename Templ>
-struct universal_arg<2, template_<wrap_higher_template<Templ>::template templ>>
-{
-    //TODO: Add requirement for instantiating Templ with values of the parameters
-    template<parameter_tag... Params>
-    constexpr universal_arg(template_signature<Params...>) {}
-};
-
+template<tag_type Tag>
+struct level_2;
 
 template<parameter_tag... Params>
-universal_arg(template_signature<Params...>) -> universal_arg<2, template_<wrap_universal<1>::template templ>>;
+struct level_2<template_signature<Params...>>
+{
+    constexpr level_2(template_signature<Params...>) {};
+
+    template<template<generic_arg_like auto...> typename Templ>
+    struct apply
+    {
+        //TODO: link discussion in [std-Discussion] regarding why we need this work-around
+        //TODO: DO NOT REMOVE THE WRAPPER, THERE IS A CLANG BUG PREVENTING SIMPLE ALIAS WHEN `Templ` is non variadic alias template
+        template<basic_arg... Values>
+        struct type_wrapper {using type = Templ<Values...>; };
+
+        template<basic_arg... Values> requires (sizeof...(Params) == sizeof...(Values)) &&
+            ((decltype(Values)::tag_enum == Params::tag_enum) && ...)
+        using templ = typename type_wrapper<Values...>::type;
+
+
+    };
+};
+
+template<parameter_tag... Params>
+level_2(template_signature<Params...>) -> level_2<template_signature<Params...>>;
+
+
 } //namespace uta
+
+#endif // UTA_H

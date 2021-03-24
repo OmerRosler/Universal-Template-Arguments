@@ -25,19 +25,22 @@ struct test_variadic_template {};
 template<template<uta::basic_arg, uta::basic_arg> typename Templ>
 int test_templ() { return 42;}
 
-template<uta::template_signature templ>
-int test_sig_type() { return 42;}
 
-template<uta::universal_arg Any>
+template<uta::up_to_level_1 Any>
 int test_templated_arg() { return 42;}
 
 
-template<uta::universal_arg Any>
+template<uta::up_to_level_1 Any>
 auto test_template1_apply()
 {
     return typename decltype(Any)::template apply<uta::type_<int>{}, uta::nttp_<42>{}>::type();
 }
 
+template<uta::level_2 Sig>
+auto test_template2_usage()
+{
+    return typename decltype(Sig)::template apply<templ_adaptor>::template templ<uta::type_<int>{}, uta::nttp_<42>{}>();
+}
 
 int main()
 {
@@ -52,19 +55,17 @@ int main()
 
     static_assert(!are_all_types<uta::nttp_<42>{}>());
 
-    constexpr uta::template_signature t{uta::variadic_arg_list{uta::nttp_<42>{}, uta::type_<int>{}, uta::type_<double>{}}};
-
-    test_sig_type<t>();
-
     test_templ<templ_adaptor>();
-
-    static_assert(std::is_same_v<decltype(t), const uta::template_signature<uta::nttp_p, uta::type_p, uta::type_p>>);
 
     test_templated_arg<uta::type_<int>{}>();
 
     test_templated_arg<uta::template_<templ_adaptor>{}>();
 
     test_template1_apply<uta::template_<templ_adaptor>{}>();
+
+    constexpr uta::template_signature<uta::type_p, uta::nttp_p> sig{};
+
+    test_template2_usage<sig>();
 
 
 }
