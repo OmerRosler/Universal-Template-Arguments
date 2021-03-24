@@ -1,11 +1,9 @@
 #ifndef UTA_H
 #define UTA_H
-
 #include <type_traits>
 
 namespace uta
 {
-
 enum class arg_type 
 {
     type,
@@ -13,13 +11,21 @@ enum class arg_type
     templ
 };
 
-/* Forward Declarations */
-
-template<typename T>
-struct is_tag_impl;
-
 namespace
 {
+template<typename T>
+struct tag {};
+
+
+/* Forward Declarations */
+
+
+template<typename T>
+struct is_tag_impl : std::false_type {};
+
+template<typename T>
+struct is_tag_impl<tag<T>> : std::true_type {};
+
 template<typename T>
 concept tag_type = is_tag_impl<T>::value;
 }
@@ -77,20 +83,7 @@ template<tag_type>
 struct universal_argument;
 
 
-template<typename T>
-struct is_tag_impl : std::false_type {};
 
-template<typename T>
-struct is_tag_impl<type_<T>> : std::true_type {};
-
-template<auto V>
-struct is_tag_impl<nttp_<V>> : std::true_type {};
-
-template<template<template_argument auto...> typename Templ>
-struct is_tag_impl<template_<Templ>> : std::true_type {};
-
-template<template_parameter... Params>
-struct is_tag_impl<template_parameter_accepting<Params...>> : std::true_type {};
 
 
 /*******************************************************/
@@ -122,7 +115,7 @@ struct template_parameter_accepting {};
 
 
 template<typename T>
-struct level_0<type_<T>>
+struct level_0<tag<type_<T>>>
 {
     constexpr level_0(type_<T>) noexcept {}
 
@@ -132,7 +125,7 @@ struct level_0<type_<T>>
 };
 
 template<auto V>
-struct level_0<nttp_<V>> : std::integral_constant<decltype(V), V>
+struct level_0<tag<nttp_<V>>> : std::integral_constant<decltype(V), V>
 {
     constexpr level_0(nttp_<V>) noexcept {}
 
@@ -141,10 +134,10 @@ struct level_0<nttp_<V>> : std::integral_constant<decltype(V), V>
 };
 
 template<typename T>
-level_0(type_<T>) -> level_0<type_<T>>;
+level_0(type_<T>) -> level_0<tag<type_<T>>>;
 
 template<auto V>
-level_0(nttp_<V>) -> level_0<nttp_<V>>;
+level_0(nttp_<V>) -> level_0<tag<nttp_<V>>>;
 
 /*************************************************************/
 
@@ -153,7 +146,7 @@ template<tag_type>
 struct level_1;
 
 template<template<level_0...> typename Templ>
-struct level_1<template_<Templ>>
+struct level_1<tag<template_<Templ>>>
 {
     constexpr level_1(template_<Templ>) {}
 
@@ -172,7 +165,7 @@ struct level_1<template_<Templ>>
 
 
 template<template<level_0...> typename Templ>
-level_1(template_<Templ>) -> level_1<template_<Templ>>;
+level_1(template_<Templ>) -> level_1<tag<template_<Templ>>>;
 
 
 /*************************************************************/
@@ -181,7 +174,7 @@ template<tag_type Tag>
 struct level_2;
 
 template<template_parameter... Params>
-struct level_2<template_parameter_accepting<Params...>>
+struct level_2<tag<template_parameter_accepting<Params...>>>
 {
     constexpr level_2(template_parameter_accepting<Params...>) {};
 
@@ -206,7 +199,7 @@ struct level_2<template_parameter_accepting<Params...>>
 
 template<template_parameter... Params>
 level_2(template_parameter_accepting<Params...>) ->
-    level_2<template_parameter_accepting<Params...>>;
+    level_2<tag<template_parameter_accepting<Params...>>>;
 
 
 /*************************************************************/
@@ -215,38 +208,38 @@ template<tag_type>
 struct universal_argument;
 
 template<typename T>
-struct universal_argument<type_<T>> : level_0<type_<T>> 
+struct universal_argument<tag<type_<T>>> : level_0<tag<type_<T>>> 
 {
-    using base_t = level_0<type_<T>>;
+    using base_t = level_0<tag<type_<T>>>;
     using base_t::base_t;
 
     static constexpr auto tag_enum = arg_type::type;
 };
 
 template<auto V>
-struct universal_argument<nttp_<V>> : level_0<nttp_<V>>
+struct universal_argument<tag<nttp_<V>>> : level_0<tag<nttp_<V>>>
 {
-    using base_t = level_0<nttp_<V>>;
+    using base_t = level_0<tag<nttp_<V>>>;
     using base_t::base_t;
 
     static constexpr auto tag_enum = arg_type::nttp;
 };
 
 template<template<level_0...> typename Templ>
-struct universal_argument<template_<Templ>> : level_1<template_<Templ>>
+struct universal_argument<tag<template_<Templ>>> : level_1<tag<template_<Templ>>>
 {
-    using base_t = level_1<template_<Templ>>;
+    using base_t = level_1<tag<template_<Templ>>>;
     using base_t::base_t;
 };
 
 template<typename T>
-universal_argument(type_<T>) -> universal_argument<type_<T>>;
+universal_argument(type_<T>) -> universal_argument<tag<type_<T>>>;
 
 template<auto V>
-universal_argument(nttp_<V>) -> universal_argument<nttp_<V>>;
+universal_argument(nttp_<V>) -> universal_argument<tag<nttp_<V>>>;
 
 template<template<level_0...> typename Templ>
-universal_argument(template_<Templ>) -> universal_argument<template_<Templ>>;
+universal_argument(template_<Templ>) -> universal_argument<tag<template_<Templ>>>;
 
 
 } //namespace uta
