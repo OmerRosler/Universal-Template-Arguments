@@ -1,36 +1,36 @@
 
 #include <uta.hpp>
 
-template<uta::basic_arg Arg>
+template<uta::level_0 Arg>
 int basic_universal()
 {
     return 0;
 }
 
-template<uta::basic_arg... args>
+template<uta::level_0... args>
 constexpr int are_all_types()
 {
-    return ((decltype(args)::tag_enum == uta::basic_arg_type::type) && ...);
+    return ((decltype(args)::tag_enum == uta::arg_type::type) && ...);
 }
 
 template<typename T, auto V>
 struct templ_example {};
 
-template<uta::basic_arg T, uta::basic_arg V>
+template<uta::level_0 T, uta::level_0 V>
 using templ_adaptor = templ_example<typename decltype(T)::type, decltype(V)::value>;
 
-template<uta::basic_arg... Args>
+template<uta::level_0... Args>
 struct test_variadic_template {};
 
-template<template<uta::basic_arg, uta::basic_arg> typename Templ>
+template<template<uta::level_0, uta::level_0> typename Templ>
 int test_templ() { return 42;}
 
 
-template<uta::up_to_level_1 Any>
+template<uta::universal_argument Any>
 int test_templated_arg() { return 42;}
 
 
-template<uta::up_to_level_1 Any>
+template<uta::universal_argument Any>
 auto test_template1_apply()
 {
     return typename decltype(Any)::template apply<uta::type_<int>{}, uta::nttp_<42>{}>::type();
@@ -63,7 +63,7 @@ int main()
 
     test_template1_apply<uta::template_<templ_adaptor>{}>();
 
-    constexpr uta::template_signature<uta::type_p, uta::nttp_p> sig{};
+    constexpr uta::template_parameter_accepting<uta::type_p, uta::nttp_p> sig{};
 
     test_template2_usage<sig>();
 
